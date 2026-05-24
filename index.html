@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>PostureGuard</title>
+<style>
+  :root {
+    --ok: #1a9e5c;
+    --warn: #d97706;
+    --danger: #dc2626;
+    --ok-bg: #d1fae5;
+    --warn-bg: #fef3c7;
+    --danger-bg: #fee2e2;
+    --bg: #f4f4f5;
+    --card: #ffffff;
+    --text: #18181b;
+    --text2: #71717a;
+    --border: #e4e4e7;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* NAV */
+  .nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    display: flex; z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 10px 0 8px;
+    background: none; border: none; cursor: pointer;
+    font-size: 10px; color: var(--text2); gap: 3px;
+    transition: color 0.15s;
+  }
+  .nav-btn.active { color: #2563eb; }
+  .nav-btn svg { width: 22px; height: 22px; stroke-width: 1.8; }
+
+  /* PAGES */
+  .page { display: none; padding: 0 16px; padding-top: 16px; }
+  .page.active { display: block; }
+
+  /* HEADER */
+  .page-header {
+    font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
+    margin-bottom: 16px; color: var(--text);
+  }
+
+  /* CARD */
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    padding: 16px 18px; margin-bottom: 12px;
+    border: 1px solid var(--border);
+  }
+  .card-label {
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+  }
+
+  /* ANGLE DISPLAY */
+  .angle-hero {
+    display: flex; align-items: flex-end; gap: 4px; line-height: 1;
+    margin-bottom: 4px;
+  }
+  .angle-num { font-size: 64px; font-weight: 800; letter-spacing: -3px; transition: color 0.3s; }
+  .angle-deg { font-size: 28px; font-weight: 400; color: var(--text2); margin-bottom: 8px; }
+
+  /* PROGRESS BAR */
+  .bar-track {
+    height: 8px; background: #e4e4e7; border-radius: 99px; overflow: hidden; margin: 10px 0 4px;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 99px;
+    transition: width 0.2s ease, background 0.3s;
+  }
+  .bar-marks {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: var(--text2);
+  }
+
+  /* BADGE */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 13px; font-weight: 600;
+    padding: 5px 12px; border-radius: 99px; margin-top: 8px;
+    transition: background 0.3s, color 0.3s;
+  }
+  .badge-ok     { background: var(--ok-bg);     color: var(--ok); }
+  .badge-warn   { background: var(--warn-bg);   color: var(--warn); }
+  .badge-danger { background: var(--danger-bg); color: var(--danger); }
+  .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  /* STATS ROW */
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card {
+    background: var(--bg); border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .stat-val { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .stat-lbl { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* SENSOR BTN */
+  .btn-primary {
+    width: 100%; padding: 15px;
+    background: #2563eb; color: #fff;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 16px; font-weight: 600; cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+  .btn-primary.running { background: #dc2626; }
+  .btn-secondary {
+    width: 100%; padding: 12px;
+    background: none; color: #2563eb;
+    border: 1.5px solid #2563eb; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    margin-top: 8px; transition: background 0.15s;
+  }
+  .btn-secondary:active { background: #eff6ff; }
+
+  /* SLIDER */
+  .slider-group { margin-bottom: 14px; }
+  .slider-group label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 14px; margin-bottom: 6px;
+  }
+  .slider-group label span { font-weight: 700; font-size: 15px; }
+  input[type=range] {
+    width: 100%; -webkit-appearance: none; height: 4px;
+    border-radius: 4px; background: #d4d4d8; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 24px; height: 24px;
+    border-radius: 50%; background: #fff; border: 2.5px solid #2563eb;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+  }
+
+  /* CHART */
+  .chart-wrap { position: relative; height: 180px; margin-top: 8px; }
+  canvas { width: 100% !important; }
+
+  /* LOG TABLE */
+  .log-list { max-height: 320px; overflow-y: auto; }
+  .log-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .log-row:last-child { border-bottom: none; }
+  .log-time { color: var(--text2); font-size: 12px; min-width: 72px; }
+  .log-angle { font-weight: 700; font-size: 15px; }
+  .log-zone { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+
+  /* OVERLAY */
+  #overlay {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 200; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: background 0.4s;
+  }
+  #overlay.show { display: flex; }
+  .ov-icon { font-size: 64px; margin-bottom: 16px; }
+  .ov-title { font-size: 26px; font-weight: 800; color: #fff; text-align: center; margin-bottom: 8px; }
+  .ov-msg { font-size: 15px; color: rgba(255,255,255,0.85); text-align: center; line-height: 1.6; padding: 0 32px; }
+  .ov-angle { font-size: 56px; font-weight: 800; color: #fff; margin-top: 12px; letter-spacing: -2px; }
+  .ov-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+  /* SENSOR INDICATOR */
+  .sensor-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    margin-bottom: 12px; font-size: 13px; color: var(--text2);
+  }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #d4d4d8; flex-shrink: 0;
+  }
+  .live-dot.on { background: #16a34a; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+  /* export btn */
+  .btn-export {
+    width: 100%; padding: 12px;
+    background: #18181b; color: #fff;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    margin-top: 4px;
+  }
+
+  .empty-state { text-align: center; padding: 32px 16px; color: var(--text2); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- OVERLAY -->
+<div id="overlay">
+  <div class="ov-icon" id="ov-icon">📵</div>
+  <div class="ov-title" id="ov-title">姿勢を正してください</div>
+  <div class="ov-msg" id="ov-msg">スマホを立てると画面が見えるようになります</div>
+  <div class="ov-angle" id="ov-angle">--°</div>
+  <div class="ov-sub" id="ov-sub">現在の傾き</div>
+</div>
+
+<!-- ========== PAGE: HOME ========== -->
+<div class="page active" id="page-home">
+  <div class="page-header">PostureGuard</div>
+
+  <div class="sensor-bar">
+    <span class="live-dot" id="live-dot"></span>
+    <span id="sensor-label">「センサー開始」を押してください</span>
+  </div>
+
+  <div class="card">
+    <div class="card-label">現在の前傾角度</div>
+    <div class="angle-hero">
+      <div class="angle-num" id="angle-num">--</div>
+      <div class="angle-deg">°</div>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="bar-fill" style="width:0%;background:var(--ok)"></div></div>
+    <div class="bar-marks"><span>0°</span><span>30°</span><span>60°</span><span>90°</span></div>
+    <div class="badge badge-ok" id="state-badge"><span class="badge-dot"></span><span id="badge-text">待機中</span></div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-val" id="stat-session">0分</div>
+      <div class="stat-lbl">セッション時間</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-violation">0%</div>
+      <div class="stat-lbl">警告以上の割合</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-avg">--°</div>
+      <div class="stat-lbl">平均角度</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-max">--°</div>
+      <div class="stat-lbl">最大角度</div>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="btn-start" onclick="toggleSensor()">センサーを開始する</button>
+  <button class="btn-secondary" onclick="resetSession()">セッションをリセット</button>
+</div>
+
+<!-- ========== PAGE: LOG ========== -->
+<div class="page" id="page-log">
+  <div class="page-header">ログ</div>
+
+  <div class="card">
+    <div class="card-label">角度の推移（直近60秒）</div>
+    <div class="chart-wrap">
+      <canvas id="chart-line"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">逸脱イベント記録</div>
+    <div class="log-list" id="log-list">
+      <div class="empty-state">まだ記録がありません</div>
+    </div>
+  </div>
+
+  <button class="btn-export" onclick="exportCSV()">CSVでエクスポート</button>
+</div>
+
+<!-- ========== PAGE: STATS ========== -->
+<div class="page" id="page-stats">
+  <div class="page-header">統計</div>
+
+  <div class="card">
+    <div class="card-label">ゾーン別割合（今セッション）</div>
+    <div class="chart-wrap" style="height:160px">
+      <canvas id="chart-pie"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">角度分布（度数分布）</div>
+    <div class="chart-wrap">
+      <canvas id="chart-hist"></canvas>
+    </div>
+  </div>
+
+  <div class="stats-row" style="margin-top:12px">
+    <div class="stat-card">
+      <div class="stat-val" id="s-total">0</div>
+      <div class="stat-lbl">総計測サンプル数</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="s-ok-pct">--%</div>
+      <div class="stat-lbl">正常割合</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="s-warn-pct">--%</div>
+      <div class="stat-lbl">警告割合</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="s-danger-pct">--%</div>
+      <div class="stat-lbl">危険割合</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PAGE: SETTINGS ========== -->
+<div class="page" id="page-settings">
+  <div class="page-header">設定</div>
+
+  <div class="card">
+    <div class="section-title">しきい値</div>
+    <div class="slider-group">
+      <label>警告しきい値 <span id="lbl-warn">30°</span></label>
+      <input type="range" min="10" max="60" value="30" step="1" id="sl-warn" oninput="updateThresh()">
+    </div>
+    <div class="slider-group">
+      <label>危険しきい値 <span id="lbl-danger">50°</span></label>
+      <input type="range" min="20" max="80" value="50" step="1" id="sl-danger" oninput="updateThresh()">
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-top:4px;">先行研究では30〜45°が警告の目安とされています（Hansraj 2014）</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">オーバーレイ</div>
+    <div class="slider-group">
+      <label>最大不透明度（危険時） <span id="lbl-opacity">90%</span></label>
+      <input type="range" min="30" max="100" value="90" step="5" id="sl-opacity" oninput="updateOpacity(this)">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">研究モード</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:10px;">被験者IDを設定するとCSVエクスポート時に付記されます</div>
+    <input type="text" id="subject-id" placeholder="被験者ID（例：P001）"
+      style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;outline:none;">
+  </div>
+
+  <button class="btn-export" onclick="clearAllData()" style="background:#dc2626;margin-top:4px;">全データを削除</button>
+</div>
+
+<!-- NAV BAR -->
+<nav class="nav">
+  <button class="nav-btn active" id="nav-home" onclick="showPage('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+    ホーム
+  </button>
+  <button class="nav-btn" id="nav-log" onclick="showPage('log')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    ログ
+  </button>
+  <button class="nav-btn" id="nav-stats" onclick="showPage('stats')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3v18h18M7 16l4-4 4 4 4-4"/></svg>
+    統計
+  </button>
+  <button class="nav-btn" id="nav-settings" onclick="showPage('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    設定
+  </button>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ===== STATE =====
+let warnThresh = 30, dangerThresh = 50, maxOpacity = 0.90;
+let sensorActive = false, sessionStart = null;
+let currentAngle = 0;
+let angleHistory = [];   // {t, angle, zone}
+let violationLog = [];   // {time, angle, zone, duration}
+let lastZone = 'ok', zoneStart = null;
+let smoothBuf = [];
+let sessionTimer = null;
+let lineChart = null, pieChart = null, histChart = null;
+let zoneCounts = {ok:0, warn:0, danger:0};
+
+// ===== PAGE NAV =====
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if (name === 'log') renderLog();
+  if (name === 'stats') renderStats();
+}
+
+// ===== SENSOR =====
+function toggleSensor() {
+  if (!sensorActive) {
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(s => {
+        if (s === 'granted') startSensor();
+        else alert('センサーの許可が拒否されました');
+      }).catch(e => alert('エラー: ' + e.message));
+    } else {
+      startSensor();
+    }
+  } else {
+    stopSensor();
+  }
+}
+
+function startSensor() {
+  sensorActive = true;
+  sessionStart = Date.now();
+  zoneStart = Date.now();
+  document.getElementById('btn-start').textContent = '計測を停止する';
+  document.getElementById('btn-start').classList.add('running');
+  document.getElementById('live-dot').classList.add('on');
+  document.getElementById('sensor-label').textContent = 'センサー計測中';
+  sessionTimer = setInterval(updateSessionStats, 1000);
+  window.addEventListener('deviceorientation', onOrientation);
+  initCharts();
+}
+
+function stopSensor() {
+  sensorActive = false;
+  window.removeEventListener('deviceorientation', onOrientation);
+  clearInterval(sessionTimer);
+  document.getElementById('btn-start').textContent = 'センサーを開始する';
+  document.getElementById('btn-start').classList.remove('running');
+  document.getElementById('live-dot').classList.remove('on');
+  document.getElementById('sensor-label').textContent = '計測を停止しました';
+}
+
+function onOrientation(e) {
+  if (e.beta === null) return;
+  const raw = Math.max(0, Math.min(90, 90 - Math.abs(e.beta)));
+  smoothBuf.push(raw);
+  if (smoothBuf.length > 5) smoothBuf.shift();
+  const angle = Math.round(smoothBuf.reduce((a,b)=>a+b,0) / smoothBuf.length);
+  currentAngle = angle;
+  processAngle(angle);
+}
+
+function processAngle(angle) {
+  const zone = angle < warnThresh ? 'ok' : angle < dangerThresh ? 'warn' : 'danger';
+
+  // zone transition logging
+  if (zone !== lastZone) {
+    if (lastZone !== 'ok') {
+      const dur = Math.round((Date.now() - zoneStart) / 1000);
+      violationLog.unshift({ time: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit',second:'2-digit'}), angle: currentAngle, zone: lastZone, duration: dur });
+      if (violationLog.length > 200) violationLog.pop();
+    }
+    zoneStart = Date.now();
+    lastZone = zone;
+  }
+
+  zoneCounts[zone]++;
+  angleHistory.push({ t: Date.now(), angle, zone });
+  if (angleHistory.length > 300) angleHistory.shift();
+
+  updateHomeUI(angle, zone);
+  updateOverlay(angle, zone);
+  updateLineChart(angle);
+}
+
+// ===== HOME UI =====
+function updateHomeUI(angle, zone) {
+  document.getElementById('angle-num').textContent = angle;
+  document.getElementById('angle-num').style.color =
+    zone==='ok' ? 'var(--ok)' : zone==='warn' ? 'var(--warn)' : 'var(--danger)';
+
+  const pct = Math.min(100, Math.round(angle/90*100));
+  const fill = document.getElementById('bar-fill');
+  fill.style.width = pct + '%';
+  fill.style.background = zone==='ok' ? 'var(--ok)' : zone==='warn' ? 'var(--warn)' : 'var(--danger)';
+
+  const badge = document.getElementById('state-badge');
+  const txt = document.getElementById('badge-text');
+  badge.className = 'badge badge-' + zone;
+  txt.textContent = zone==='ok' ? '適正範囲' : zone==='warn' ? '警告 — 傾きすぎです' : '危険 — 首に負担大';
+}
+
+function updateSessionStats() {
+  if (!sessionStart) return;
+  const elapsed = Math.round((Date.now() - sessionStart) / 1000);
+  const min = Math.floor(elapsed/60), sec = elapsed%60;
+  document.getElementById('stat-session').textContent = min > 0 ? min+'分'+sec+'秒' : sec+'秒';
+
+  const total = zoneCounts.ok + zoneCounts.warn + zoneCounts.danger;
+  const vio = zoneCounts.warn + zoneCounts.danger;
+  document.getElementById('stat-violation').textContent = total > 0 ? Math.round(vio/total*100)+'%' : '0%';
+
+  if (angleHistory.length > 0) {
+    const angles = angleHistory.map(h=>h.angle);
+    document.getElementById('stat-avg').textContent = Math.round(angles.reduce((a,b)=>a+b,0)/angles.length) + '°';
+    document.getElementById('stat-max').textContent = Math.max(...angles) + '°';
+  }
+}
+
+function resetSession() {
+  if (!confirm('セッションデータをリセットしますか？')) return;
+  angleHistory = []; zoneCounts = {ok:0,warn:0,danger:0};
+  sessionStart = sensorActive ? Date.now() : null;
+  document.getElementById('stat-session').textContent = '0分';
+  document.getElementById('stat-violation').textContent = '0%';
+  document.getElementById('stat-avg').textContent = '--°';
+  document.getElementById('stat-max').textContent = '--°';
+  if (lineChart) lineChart.data.labels=[], lineChart.data.datasets[0].data=[], lineChart.update();
+}
+
+// ===== OVERLAY =====
+function updateOverlay(angle, zone) {
+  const ov = document.getElementById('overlay');
+  if (zone === 'ok') {
+    ov.style.display = 'none';
+    return;
+  }
+  ov.style.display = 'flex';
+  document.getElementById('ov-angle').textContent = angle + '°';
+  if (zone === 'warn') {
+    const t = (angle - warnThresh) / (dangerThresh - warnThresh);
+    const alpha = (0.2 + t * 0.4 * maxOpacity).toFixed(2);
+    ov.style.background = `rgba(180,50,20,${alpha})`;
+    document.getElementById('ov-icon').textContent = '⚠️';
+    document.getElementById('ov-title').textContent = '傾きすぎています';
+    document.getElementById('ov-msg').textContent = 'スマホをもう少し立ててください';
+  } else {
+    ov.style.background = `rgba(160,20,10,${maxOpacity})`;
+    document.getElementById('ov-icon').textContent = '📵';
+    document.getElementById('ov-title').textContent = 'スマホを立ててください！';
+    document.getElementById('ov-msg').textContent = 'この角度は首への負担が非常に大きい状態です';
+  }
+}
+
+// ===== CHARTS =====
+function initCharts() {
+  if (lineChart) return;
+  const ctx1 = document.getElementById('chart-line').getContext('2d');
+  lineChart = new Chart(ctx1, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        data: [], borderColor: '#2563eb', borderWidth: 2,
+        fill: true, backgroundColor: 'rgba(37,99,235,0.08)',
+        pointRadius: 0, tension: 0.4
+      }]
+    },
+    options: {
+      animation: false, responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 0, max: 90, grid: { color: '#e4e4e7' },
+          ticks: { font: { size: 10 }, callback: v => v+'°' }
+        },
+        x: { grid: { display: false }, ticks: { display: false } }
+      }
+    }
+  });
+}
+
+function updateLineChart(angle) {
+  if (!lineChart) return;
+  const now = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  lineChart.data.labels.push(now);
+  lineChart.data.datasets[0].data.push(angle);
+  if (lineChart.data.labels.length > 60) {
+    lineChart.data.labels.shift();
+    lineChart.data.datasets[0].data.shift();
+  }
+  lineChart.update('none');
+}
+
+function renderStats() {
+  const total = zoneCounts.ok + zoneCounts.warn + zoneCounts.danger;
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-ok-pct').textContent    = total>0 ? Math.round(zoneCounts.ok/total*100)+'%' : '--%';
+  document.getElementById('s-warn-pct').textContent  = total>0 ? Math.round(zoneCounts.warn/total*100)+'%' : '--%';
+  document.getElementById('s-danger-pct').textContent= total>0 ? Math.round(zoneCounts.danger/total*100)+'%' : '--%';
+
+  // Pie
+  const ctx2 = document.getElementById('chart-pie').getContext('2d');
+  if (pieChart) pieChart.destroy();
+  pieChart = new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: ['正常', '警告', '危険'],
+      datasets: [{
+        data: [zoneCounts.ok||1, zoneCounts.warn, zoneCounts.danger],
+        backgroundColor: ['#16a34a','#d97706','#dc2626'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { font:{size:12}, padding:12 } } },
+      cutout: '60%'
+    }
+  });
+
+  // Histogram
+  const bins = Array(9).fill(0);
+  angleHistory.forEach(h => {
+    const b = Math.min(8, Math.floor(h.angle/10));
+    bins[b]++;
+  });
+  const ctx3 = document.getElementById('chart-hist').getContext('2d');
+  if (histChart) histChart.destroy();
+  histChart = new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels: ['0-9','10-19','20-29','30-39','40-49','50-59','60-69','70-79','80+'],
+      datasets: [{
+        data: bins,
+        backgroundColor: bins.map((_,i) => i<3?'#16a34a':i<5?'#d97706':'#dc2626'),
+        borderRadius: 4, borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid:{display:false}, ticks:{font:{size:10}} },
+        y: { grid:{color:'#e4e4e7'}, ticks:{font:{size:10}} }
+      }
+    }
+  });
+}
+
+function renderLog() {
+  const list = document.getElementById('log-list');
+  if (violationLog.length === 0) {
+    list.innerHTML = '<div class="empty-state">まだ逸脱イベントがありません</div>';
+    return;
+  }
+  list.innerHTML = violationLog.map(l => `
+    <div class="log-row">
+      <span class="log-time">${l.time}</span>
+      <span class="log-angle" style="color:${l.zone==='warn'?'var(--warn)':'var(--danger)'}">${l.angle}°</span>
+      <span class="log-zone" style="background:${l.zone==='warn'?'var(--warn-bg)':'var(--danger-bg)'};color:${l.zone==='warn'?'var(--warn)':'var(--danger)'}">
+        ${l.zone==='warn'?'警告':'危険'} ${l.duration}秒
+      </span>
+    </div>
+  `).join('');
+}
+
+// ===== SETTINGS =====
+function updateThresh() {
+  warnThresh = parseInt(document.getElementById('sl-warn').value);
+  dangerThresh = parseInt(document.getElementById('sl-danger').value);
+  if (dangerThresh <= warnThresh) {
+    dangerThresh = warnThresh + 5;
+    document.getElementById('sl-danger').value = dangerThresh;
+  }
+  document.getElementById('lbl-warn').textContent = warnThresh + '°';
+  document.getElementById('lbl-danger').textContent = dangerThresh + '°';
+}
+function updateOpacity(el) {
+  maxOpacity = parseInt(el.value) / 100;
+  document.getElementById('lbl-opacity').textContent = el.value + '%';
+}
+function clearAllData() {
+  if (!confirm('全データを削除しますか？')) return;
+  angleHistory=[]; violationLog=[]; zoneCounts={ok:0,warn:0,danger:0};
+  alert('削除しました');
+}
+
+// ===== CSV EXPORT =====
+function exportCSV() {
+  const subjectId = document.getElementById('subject-id').value || 'unknown';
+  let csv = 'subject_id,time,angle_deg,zone,violation_duration_sec\n';
+  violationLog.forEach(l => {
+    csv += `${subjectId},${l.time},${l.angle},${l.zone},${l.duration}\n`;
+  });
+  if (violationLog.length === 0) {
+    alert('エクスポートするデータがありません');
+    return;
+  }
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `posture_${subjectId}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
